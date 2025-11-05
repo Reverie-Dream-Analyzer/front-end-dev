@@ -7,6 +7,8 @@ import { useDreams } from '@/components/dreams-provider';
 import { CelestialBackground } from '@/components/celestial-background';
 import { DreamList } from '@/components/dream-list';
 import { ArrowLeft } from 'lucide-react';
+import { Cormorant_Garamond } from 'next/font/google';
+const cormorant = Cormorant_Garamond({ weight: ['400', '700'], subsets: ['latin'] });
 
 export default function DreamBankPage() {
   const router = useRouter();
@@ -43,8 +45,8 @@ export default function DreamBankPage() {
               <p className="text-sm uppercase tracking-wide text-indigo-500 dark:text-indigo-300">
                 Dream bank
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
-                Explore your entire dream library
+              <h1 className={`${cormorant.className} mt-2 text-4xl font-semibold text-slate-900 dark:text-white`}>
+                Explore your dream library
               </h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 Filter and edit your saved dreams, spot recurring symbols, and keep your journal up to date.

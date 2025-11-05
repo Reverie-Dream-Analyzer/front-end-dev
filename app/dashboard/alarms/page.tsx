@@ -6,6 +6,8 @@ import { useAuth } from '@/components/auth-provider';
 import { CelestialBackground } from '@/components/celestial-background';
 import { AlarmSettings } from '@/components/alarm-settings';
 import { ArrowLeft } from 'lucide-react';
+import { Cormorant_Garamond } from 'next/font/google';
+const cormorant = Cormorant_Garamond({ weight: ['400', '700'], subsets: ['latin'] });
 
 export default function AlarmSettingsPage() {
   const router = useRouter();
@@ -39,9 +41,9 @@ export default function AlarmSettingsPage() {
             </button>
             <div>
               <p className="text-sm uppercase tracking-wide text-indigo-500 dark:text-indigo-300">
-                Morning rituals
+                Your Alarms
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
+              <h1 className={`${cormorant.className} mt-2 text-4xl font-semibold text-slate-900 dark:text-white`}>
                 Configure your dream-friendly alarms
               </h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">

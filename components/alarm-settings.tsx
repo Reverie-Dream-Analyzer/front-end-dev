@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import { AlarmClock, Clock3, Moon, Plus, Sun, Trash2 } from 'lucide-react';
-import { AnimatedMoon, FloatingStars } from './celestial-icons';
+import { FloatingStars } from './celestial-icons';
 
 type Alarm = {
   id: string;
@@ -120,7 +120,7 @@ export function AlarmSettings({ userEmail }: AlarmSettingsProps) {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-blue-500/30 via-indigo-600/30 to-purple-500/30 p-3">
-              <AnimatedMoon className="h-6 w-6 text-blue-100" />
+              <AlarmClock className="h-6 w-6 text-blue-100" />
             </div>
             <FloatingStars className="pointer-events-none absolute -top-2 -left-2 h-10 w-10 text-white/30" />
           </div>
