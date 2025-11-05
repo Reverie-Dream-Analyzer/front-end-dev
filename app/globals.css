@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom utility alias so `bg-linear-to-b` is recognized the same as Tailwind's
+   `bg-gradient-to-b`. This avoids unknown-class warnings in editors and linters.
+   Keeps using Tailwind's gradient stops classes like `from-*`, `via-*`, `to-*`. */
+@layer utilities {
+  .bg-linear-to-b {
+    background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+  }
+  .bg-linear-to-r {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops));
+  }
+  .bg-linear-to-br {
+    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+  }
+  .bg-linear-to-t {
+    background-image: linear-gradient(to top, var(--tw-gradient-stops));
+  }
+  .bg-linear-to-tr {
+    background-image: linear-gradient(to top right, var(--tw-gradient-stops));
+  }
+}
