@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
-
+import { loginUser, registerUser } from '@/lib/api/auth';
 
 type FormState = {
   email: string;
@@ -16,12 +16,18 @@ type FormState = {
 
 export default function SignIn() {
   const [isSignIn, setIsSignIn] = useState(true);
-  const [formState, setFormState] = useState<FormState>({ email: '', username: '', password: '', confirmPassword: '' });
+  const [formState, setFormState] = useState<FormState>({
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login, isAuthenticated, user } = useAuth();
 
+  // Redirect once authenticated
   useEffect(() => {
     if (isAuthenticated) {
       if (user?.hasProfile) {
@@ -32,6 +38,7 @@ export default function SignIn() {
     }
   }, [isAuthenticated, router, user]);
 
+  // Input handler
   const handleInputChange =
     (field: keyof FormState) =>
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -42,14 +49,19 @@ export default function SignIn() {
     };
 
   const resetForm = () => {
-    setFormState({ email: '', username: '', password: '', confirmPassword: '' });
+    setFormState({
+      email: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    });
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
 
-    const { email, password, confirmPassword } = formState;
+    const { email, username, password, confirmPassword } = formState;
 
     if (!email || !password) {
       setFormError('Please enter both an email and a password.');
@@ -63,10 +75,30 @@ export default function SignIn() {
 
     try {
       setIsSubmitting(true);
-      login(email, password, { requireProfileSetup: !isSignIn });
+
+      if (isSignIn) {
+        // 🔐 SIGN IN → Flask
+        const res = await loginUser(email, password);
+        console.log("Backend login response:", res);
+
+        await login(email, password, { requireProfileSetup: false });
+
+      } else {
+        // 🆕 SIGN UP → Flask
+        const res = await registerUser(email, password, username);
+        console.log("Backend register response:", res);
+
+        // Flip back to sign-in mode
+        setIsSignIn(true);
+      }
+
       resetForm();
+
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to sign in. Please try again.';
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to reach the server. Make sure Flask is running.";
       setFormError(message);
     } finally {
       setIsSubmitting(false);
@@ -94,6 +126,8 @@ export default function SignIn() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+            
+            {/* EMAIL */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email address
@@ -107,32 +141,32 @@ export default function SignIn() {
                   required
                   value={formState.email}
                   onChange={handleInputChange('email')}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
 
-
+            {/* USERNAME (only for sign up) */}
             {!isSignIn && (
-               <div>
+              <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Username
                 </label>
                 <div className="mt-1">
                   <input
-                  id="username"
-                  name="username"
-                  type="username"
-                  autoComplete="username"
-                  required
-                  value={formState.username}
-                  onChange={handleInputChange('username')}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
-                />
+                    id="username"
+                    name="username"
+                    type="text"
+                    required
+                    value={formState.username}
+                    onChange={handleInputChange('username')}
+                    className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
               </div>
-            </div>
-            )}  
+            )}
 
+            {/* PASSWORD */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
@@ -142,15 +176,15 @@ export default function SignIn() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete={isSignIn ? 'current-password' : 'new-password'}
                   required
                   value={formState.password}
                   onChange={handleInputChange('password')}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
 
+            {/* CONFIRM PASSWORD (sign up only) */}
             {!isSignIn && (
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -161,80 +195,34 @@ export default function SignIn() {
                     id="confirmPassword"
                     name="confirmPassword"
                     type="password"
-                    autoComplete="new-password"
                     required
                     value={formState.confirmPassword}
                     onChange={handleInputChange('confirmPassword')}
-                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                    className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
                   />
-                </div>
-              </div>
-            )}  
-
-            {isSignIn && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-                  >
-                    Forgot your password?
-                  </Link>
                 </div>
               </div>
             )}
 
+            {/* ERRORS */}
             {formError && (
               <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {formError}
               </p>
             )}
 
+            {/* SUBMIT */}
             <div>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-indigo-500"
+                className="flex w-full justify-center rounded-md bg-indigo-600 py-2 px-4 text-white hover:bg-indigo-700 disabled:opacity-60"
               >
                 {isSubmitting ? 'Please wait...' : isSignIn ? 'Sign in' : 'Create account'}
               </button>
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                <span className="sr-only">Sign in with Google</span>
-                <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032 s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2 C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

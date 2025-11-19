@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from './auth-provider';
+import * as dreamApi from '@/lib/api/dream';
 import type { Dream } from './dream-entry';
 import { INITIAL_DREAMS } from '@/lib/initial-dreams';
 
@@ -34,27 +35,61 @@ export function DreamsProvider({ children }: { children: ReactNode }) {
   const [dreams, setDreams] = useState<Dream[]>(INITIAL_DREAMS);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const auth = useAuth();
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
-
     const stored = window.localStorage.getItem(storageKey);
-    startTransition(() => {
-      if (stored) {
+
+    // If we have a logged in user with a token, try to fetch server-side dreams
+    const tryLoadFromApi = async () => {
+      const token = auth?.token ?? null;
+      if (token) {
         try {
-          const parsed: Dream[] = JSON.parse(stored);
-          setDreams(parsed);
+          const apiDreams = await dreamApi.getDreams(token);
+          const mapped: Dream[] = apiDreams.map((d) => ({
+            id: d.id,
+            title: d.title,
+            description: d.dream_text ?? d.summary ?? '',
+            date: d.submitted_at ?? new Date().toISOString(),
+            mood: d.mood ?? 'neutral',
+            tags: d.tags ?? [],
+            lucidity: Boolean(d.is_lucid),
+            analysis: d.summary ?? '',
+          }));
+          startTransition(() => {
+            setDreams(mapped);
+            setIsLoaded(true);
+          });
+          // persist to storage for offline use
+          window.localStorage.setItem(storageKey, JSON.stringify(mapped));
+          return;
         } catch (error) {
-          console.warn('Unable to parse stored dreams, falling back to defaults.', error);
+          // fallback to local storage on error
+        }
+      }
+
+      // fallback: load from local storage or defaults
+      startTransition(() => {
+        if (stored) {
+          try {
+            const parsed: Dream[] = JSON.parse(stored);
+            setDreams(parsed);
+          } catch (error) {
+            console.warn('Unable to parse stored dreams, falling back to defaults.', error);
+            setDreams(INITIAL_DREAMS);
+          }
+        } else {
           setDreams(INITIAL_DREAMS);
         }
-      } else {
-        setDreams(INITIAL_DREAMS);
-      }
-      setIsLoaded(true);
-    });
-  }, [storageKey]);
+        setIsLoaded(true);
+      });
+    };
+
+    void tryLoadFromApi();
+  }, [storageKey, auth?.token]);
 
   useEffect(() => {
     if (!isLoaded || typeof window === 'undefined') {
@@ -63,19 +98,70 @@ export function DreamsProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(storageKey, JSON.stringify(dreams));
   }, [dreams, isLoaded, storageKey]);
 
-  const addDream = useCallback((dream: Dream) => {
-    setDreams((prev) => [dream, ...prev]);
-  }, []);
+  
 
-  const updateDream = useCallback((id: string, updates: Partial<Dream>) => {
-    setDreams((prev) =>
-      prev.map((dream) => (dream.id === id ? { ...dream, ...updates } : dream))
-    );
-  }, []);
+  const addDream = useCallback(
+    async (dream: Dream) => {
+      setDreams((prev) => [dream, ...prev]);
 
-  const deleteDream = useCallback((id: string) => {
-    setDreams((prev) => prev.filter((dream) => dream.id !== id));
-  }, []);
+      const token = auth?.token ?? null;
+      if (!token) return;
+
+      try {
+        await dreamApi.createDream(
+          {
+            dreamText: dream.description,
+            title: dream.title,
+            is_lucid: dream.lucidity,
+            tags: dream.tags,
+            mood: dream.mood,
+          },
+          token
+        );
+      } catch (error) {
+        console.warn('Failed to persist new dream to API', error);
+      }
+    },
+    [auth]
+  );
+
+  const updateDream = useCallback(
+    async (id: string, updates: Partial<Dream>) => {
+      setDreams((prev) => prev.map((dream) => (dream.id === id ? { ...dream, ...updates } : dream)));
+
+      const token = auth?.token ?? null;
+      if (!token) return;
+
+      try {
+        await dreamApi.updateDream(id, {
+          title: updates.title,
+          dreamText: updates.description,
+          is_lucid: updates.lucidity,
+          tags: updates.tags,
+          mood: updates.mood,
+        }, token);
+      } catch (error) {
+        console.warn('Failed to update dream on API', error);
+      }
+    },
+    [auth]
+  );
+
+  const deleteDream = useCallback(
+    async (id: string) => {
+      setDreams((prev) => prev.filter((dream) => dream.id !== id));
+
+      const token = auth?.token ?? null;
+      if (!token) return;
+
+      try {
+        await dreamApi.deleteDream(id, token);
+      } catch (error) {
+        console.warn('Failed to delete dream on API', error);
+      }
+    },
+    [auth]
+  );
 
   const resetDreams = useCallback(() => {
     setDreams(INITIAL_DREAMS);

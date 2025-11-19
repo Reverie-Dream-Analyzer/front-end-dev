@@ -13,7 +13,8 @@ type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, options?: { requireProfileSetup?: boolean }) => void;
+  token: string | null;
+  login: (params: { email: string; token: string; requireProfileSetup?: boolean }) => void;
   logout: () => void;
   completeProfile: (profile: UserProfile) => void;
 };
@@ -21,6 +22,7 @@ type AuthContextValue = {
 type StoredAuthPayload = {
   email: string;
   hasProfile?: boolean;
+  token?: string;
 };
 
 type ProfileStore = Record<string, UserProfile>;
@@ -111,15 +113,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
     };
   });
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    const stored = readStoredAuth();
+    return stored?.token ?? null;
+  });
 
-  const login = (email: string, password: string, options?: { requireProfileSetup?: boolean }) => {
-    if (!email || !password) {
-      throw new Error('Email and password are required');
+  const login = (params: { email: string; token: string; requireProfileSetup?: boolean }) => {
+    const { email, token, requireProfileSetup } = params;
+    if (!email || !token) {
+      throw new Error('Email and token are required');
     }
 
     const profiles = readProfiles();
     const existingProfile = profiles[email] ?? null;
-    const hasProfile = options?.requireProfileSetup ? false : Boolean(existingProfile);
+    const hasProfile = requireProfileSetup ? false : Boolean(existingProfile);
 
     const nextUser: AuthUser = {
       email,
@@ -128,11 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(nextUser);
-    writeStoredAuth({ email, hasProfile });
+    setAuthToken(token);
+    writeStoredAuth({ email, hasProfile, token });
   };
 
   const logout = () => {
     setUser(null);
+    setAuthToken(null);
     if (SHOULD_PERSIST_AUTH && typeof window !== 'undefined') {
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
     }
@@ -153,7 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profiles = readProfiles();
       profiles[nextUser.email] = profile;
       writeProfiles(profiles);
-      writeStoredAuth({ email: nextUser.email, hasProfile: true });
+      writeStoredAuth({
+        email: nextUser.email,
+        hasProfile: true,
+        ...(authToken ? { token: authToken } : {}),
+      });
 
       return nextUser;
     });
@@ -163,11 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
+      token: authToken,
       login,
       logout,
       completeProfile,
     }),
-    [user]
+    [authToken, completeProfile, login, logout, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
