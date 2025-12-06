@@ -81,7 +81,7 @@ export default function SignIn() {
         const res = await loginUser(email, password);
         console.log("Backend login response:", res);
 
-        await login(email, password, { requireProfileSetup: false });
+        await login({ email, token: res.token, requireProfileSetup: false });
 
       } else {
         // 🆕 SIGN UP → Flask

@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Calendar, Hash, List, MoonStar, Sparkles, Tag } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
+import { analyzeDream } from '@/lib/api/dream';
 import type { Dream } from './dream-entry';
 
 type DreamAnalysisProps = {
@@ -23,6 +25,21 @@ const moodLabels: Record<string, { label: string; emoji: string }> = {
 const MAX_RECENT_MONTHS = 6;
 
 export function DreamAnalysis({ dreams }: DreamAnalysisProps) {
+  const { token } = useAuth();
+  const [gptAnalysis, setGptAnalysis] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  useEffect(() => {
+    if (token && dreams.length > 0) {
+      setAnalysisLoading(true);
+      const firstDream = dreams[0];
+      analyzeDream(firstDream.description, token)
+        .then(setGptAnalysis)
+        .catch((error) => console.warn('Failed to get GPT analysis:', error))
+        .finally(() => setAnalysisLoading(false));
+    }
+  }, [token, dreams]);
+
   const summary = useMemo(() => {
     if (dreams.length === 0) {
       return null;

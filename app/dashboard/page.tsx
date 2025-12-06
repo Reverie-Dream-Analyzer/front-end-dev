@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { useDreams } from '@/components/dreams-provider';
+import { getUserDreamStats } from '@/lib/api/user';
 import { CelestialBackground } from '@/components/celestial-background';
 import { DreamEntry, type Dream } from '@/components/dream-entry';
 import { Cormorant_Garamond } from 'next/font/google';
@@ -51,6 +52,8 @@ export default function DashboardPage() {
   const { dreams, addDream, isLoaded } = useDreams();
   const [isRecording, setIsRecording] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [backendStats, setBackendStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -59,6 +62,16 @@ export default function DashboardPage() {
       router.replace('/auth/profile-setup');
     }
   }, [isAuthenticated, isLoggingOut, router, user]);
+
+  useEffect(() => {
+    if (user && user.id) {
+      setStatsLoading(true);
+      getUserDreamStats(user.id)
+        .then(setBackendStats)
+        .catch((error) => console.warn('Failed to fetch backend stats:', error))
+        .finally(() => setStatsLoading(false));
+    }
+  }, [user]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);

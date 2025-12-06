@@ -7,6 +7,7 @@ import { Calendar, Sparkles, Target, User, Check } from 'lucide-react';
 import { CelestialLogo } from '@/components/celestial-logo';
 import { FloatingStars, ConstellationPattern } from '@/components/celestial-icons';
 import { useAuth } from '@/components/auth-provider';
+import { updateUserProfile } from '@/lib/api/user';
 import type { UserProfile, ZodiacSign } from '@/types/user-profile';
 
 const zodiacSigns: Array<
@@ -192,7 +193,9 @@ export function ProfileSetup() {
     });
   };
 
-  const handleComplete = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleComplete = async () => {
     if (!user || !name || !birthday || !favoriteElement || selectedGoals.length === 0 || !calculatedZodiac) {
       return;
     }
@@ -204,6 +207,21 @@ export function ProfileSetup() {
       dreamGoals: selectedGoals,
       zodiacSign: calculatedZodiac,
     };
+
+    setIsSaving(true);
+    try {
+      if (user.id) {
+        await updateUserProfile(user.id, {
+          birthdate: birthday,
+          favorite_element: favoriteElement,
+          dream_goals: selectedGoals,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to save profile to backend:', error);
+    } finally {
+      setIsSaving(false);
+    }
 
     completeProfile(profile);
     router.replace('/dashboard');

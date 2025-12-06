@@ -5,6 +5,7 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import type { UserProfile } from '@/types/user-profile';
 
 type AuthUser = {
+  id?: string;
   email: string;
   hasProfile: boolean;
   profile: UserProfile | null;
@@ -20,6 +21,7 @@ type AuthContextValue = {
 };
 
 type StoredAuthPayload = {
+  id?: string;
   email: string;
   hasProfile?: boolean;
   token?: string;
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = profiles[storedUser.email] ?? null;
 
     return {
+      id: storedUser.id,
       email: storedUser.email,
       hasProfile: storedUser.hasProfile ?? Boolean(profile),
       profile,
@@ -118,8 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored?.token ?? null;
   });
 
-  const login = (params: { email: string; token: string; requireProfileSetup?: boolean }) => {
-    const { email, token, requireProfileSetup } = params;
+  const login = (params: { id?: string; email: string; token: string; requireProfileSetup?: boolean }) => {
+    const { id, email, token, requireProfileSetup } = params;
     if (!email || !token) {
       throw new Error('Email and token are required');
     }
@@ -129,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const hasProfile = requireProfileSetup ? false : Boolean(existingProfile);
 
     const nextUser: AuthUser = {
+      id,
       email,
       hasProfile,
       profile: hasProfile ? existingProfile : null,
@@ -136,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(nextUser);
     setAuthToken(token);
-    writeStoredAuth({ email, hasProfile, token });
+    writeStoredAuth({ id, email, hasProfile, token });
   };
 
   const logout = () => {

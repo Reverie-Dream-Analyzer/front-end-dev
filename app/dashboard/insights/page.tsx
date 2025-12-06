@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { useDreams } from '@/components/dreams-provider';
+import { getTrendSummary, getTrendTimeline, getDreamStreaks, getTagFrequencies, getMonthlyActivity } from '@/lib/api/dreamTrend';
 import { CelestialBackground } from '@/components/celestial-background';
 import { DreamAnalysis } from '@/components/dream-analysis';
 import { AstrologicalInsights } from '@/components/astro-insights';
@@ -14,8 +15,10 @@ const cormorant = Cormorant_Garamond({ weight: ['400', '700'], subsets: ['latin'
 
 export default function InsightsPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const { dreams, isLoaded } = useDreams();
+  const [trends, setTrends] = useState<any>(null);
+  const [trendsLoading, setTrendsLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,6 +27,24 @@ export default function InsightsPage() {
       router.replace('/auth/profile-setup');
     }
   }, [isAuthenticated, router, user]);
+
+  useEffect(() => {
+    if (token) {
+      setTrendsLoading(true);
+      Promise.all([
+        getTrendSummary(token),
+        getTrendTimeline(token),
+        getDreamStreaks(token),
+        getTagFrequencies(token),
+        getMonthlyActivity(token),
+      ])
+        .then(([summary, timeline, streaks, tags, monthly]) => {
+          setTrends({ summary, timeline, streaks, tags, monthly });
+        })
+        .catch((error) => console.warn('Failed to fetch trends:', error))
+        .finally(() => setTrendsLoading(false));
+    }
+  }, [token]);
 
   if (!isAuthenticated || !user?.hasProfile || !isLoaded || !user.profile) {
     return null;
