@@ -214,7 +214,11 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
               </button>
               <button
                 type="button"
-                onClick={() => onDeleteDream(dream.id)}
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this dream?')) {
+                    onDeleteDream(dream.id);
+                  }
+                }}
                 className="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400/60 hover:bg-red-500/20"
               >
                 <Trash2 className="h-3.5 w-3.5" />

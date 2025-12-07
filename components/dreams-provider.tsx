@@ -32,7 +32,7 @@ const getStorageKey = (email: string | undefined) =>
 export function DreamsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const storageKey = useMemo(() => getStorageKey(user?.email), [user?.email]);
-  const [dreams, setDreams] = useState<Dream[]>(INITIAL_DREAMS);
+  const [dreams, setDreams] = useState<Dream[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const auth = useAuth();
@@ -78,11 +78,11 @@ export function DreamsProvider({ children }: { children: ReactNode }) {
             const parsed: Dream[] = JSON.parse(stored);
             setDreams(parsed);
           } catch (error) {
-            console.warn('Unable to parse stored dreams, falling back to defaults.', error);
-            setDreams(INITIAL_DREAMS);
+            console.warn('Unable to parse stored dreams, falling back to empty.', error);
+            setDreams([]);
           }
         } else {
-          setDreams(INITIAL_DREAMS);
+          setDreams([]);
         }
         setIsLoaded(true);
       });

@@ -25,9 +25,10 @@ const cormorant = Cormorant_Garamond({ weight: ["400", "700"], subsets: ["latin"
 interface LandingPageProps {
   onGetStarted: () => void;
   dreamCount: number;
+  buttonText?: string;
 }
 
-export const LandingPage = ({ onGetStarted, dreamCount }: LandingPageProps) => {
+export const LandingPage = ({ onGetStarted, dreamCount, buttonText = "Start Your Journey" }: LandingPageProps) => {
   const features = [
     {
       icon: Plus,
@@ -186,7 +187,7 @@ export const LandingPage = ({ onGetStarted, dreamCount }: LandingPageProps) => {
         >
           <div className="flex items-center gap-3">
             <Zap className="h-5 w-5" />
-            <span className="text-lg">Start Your Journey</span>
+            <span className="text-lg">{buttonText}</span>
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
           </div>
         </motion.button>

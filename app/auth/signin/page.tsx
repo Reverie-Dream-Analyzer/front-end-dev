@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ChangeEvent, FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { loginUser, registerUser } from '@/lib/api/auth';
+import { Check, X } from 'lucide-react';
 
 type FormState = {
   email: string;
@@ -13,6 +14,31 @@ type FormState = {
   password: string;
   confirmPassword: string;
 };
+
+// Validation helpers
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const passwordValidation = {
+  hasUppercase: (password: string) => /[A-Z]/.test(password),
+  hasLowercase: (password: string) => /[a-z]/.test(password),
+  hasNumberOrSymbol: (password: string) => /[\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  hasMinLength: (password: string) => password.length >= 8,
+};
+
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <li className="flex items-center gap-2 text-sm">
+      {met ? (
+        <Check className="h-4 w-4 text-green-500" />
+      ) : (
+        <X className="h-4 w-4 text-red-400" />
+      )}
+      <span className={met ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>
+        {text}
+      </span>
+    </li>
+  );
+}
 
 export default function SignIn() {
   const [isSignIn, setIsSignIn] = useState(true);
@@ -26,6 +52,19 @@ export default function SignIn() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login, isAuthenticated, user } = useAuth();
+
+  // Password validation state (computed)
+  const passwordChecks = useMemo(() => ({
+    hasUppercase: passwordValidation.hasUppercase(formState.password),
+    hasLowercase: passwordValidation.hasLowercase(formState.password),
+    hasNumberOrSymbol: passwordValidation.hasNumberOrSymbol(formState.password),
+    hasMinLength: passwordValidation.hasMinLength(formState.password),
+  }), [formState.password]);
+
+  const isPasswordValid = passwordChecks.hasUppercase && passwordChecks.hasLowercase && 
+                          passwordChecks.hasNumberOrSymbol && passwordChecks.hasMinLength;
+  
+  const isEmailValid = emailRegex.test(formState.email);
 
   // Redirect once authenticated
   useEffect(() => {
@@ -68,9 +107,28 @@ export default function SignIn() {
       return;
     }
 
-    if (!isSignIn && password !== confirmPassword) {
-      setFormError('Passwords do not match. Try again.');
+    // Email format validation
+    if (!isEmailValid) {
+      setFormError('Please enter a valid email address.');
       return;
+    }
+
+    // Sign-up specific validations
+    if (!isSignIn) {
+      if (!username.trim()) {
+        setFormError('Please enter a username.');
+        return;
+      }
+
+      if (!isPasswordValid) {
+        setFormError('Please meet all password requirements.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setFormError('Passwords do not match. Try again.');
+        return;
+      }
     }
 
     try {
@@ -141,9 +199,14 @@ export default function SignIn() {
                   required
                   value={formState.email}
                   onChange={handleInputChange('email')}
-                  className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
+                  className={`block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white ${
+                    formState.email && !isEmailValid ? 'border-red-400' : ''
+                  }`}
                 />
               </div>
+              {formState.email && !isEmailValid && (
+                <p className="mt-1 text-sm text-red-500">Please enter a valid email (e.g., user@example.com)</p>
+              )}
             </div>
 
             {/* USERNAME (only for sign up) */}
@@ -182,6 +245,15 @@ export default function SignIn() {
                   className="block w-full rounded-md border px-3 py-2 dark:bg-gray-700 dark:text-white"
                 />
               </div>
+              {/* Password requirements (only show during sign up) */}
+              {!isSignIn && formState.password && (
+                <ul className="mt-3 space-y-1">
+                  <PasswordRequirement met={passwordChecks.hasMinLength} text="At least 8 characters" />
+                  <PasswordRequirement met={passwordChecks.hasUppercase} text="One uppercase letter" />
+                  <PasswordRequirement met={passwordChecks.hasLowercase} text="One lowercase letter" />
+                  <PasswordRequirement met={passwordChecks.hasNumberOrSymbol} text="One number or symbol" />
+                </ul>
+              )}
             </div>
 
             {/* CONFIRM PASSWORD (sign up only) */}

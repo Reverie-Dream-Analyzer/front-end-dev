@@ -45,3 +45,73 @@ body {
     background-image: linear-gradient(to top right, var(--tw-gradient-stops));
   }
 }
+
+/* ============ CELESTIAL BACKGROUND ANIMATIONS ============ */
+
+/* Twinkling stars - gentle fade in/out */
+@keyframes twinkle {
+  0%, 100% { opacity: var(--min-opacity, 0.2); }
+  50% { opacity: var(--max-opacity, 0.7); }
+}
+
+/* Shooting star - falls diagonally from top-right to bottom-left */
+@keyframes shooting-star-fall {
+  0% {
+    transform: translateX(0) translateY(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.6;
+  }
+  70% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(-200px) translateY(450px);
+    opacity: 0;
+  }
+}
+
+/* Gentle floating */
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-3px) translateX(1px); }
+  66% { transform: translateY(2px) translateX(-1px); }
+}
+
+/* Subtle pulse for celestial objects */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: var(--base-opacity, 0.3); }
+  50% { opacity: calc(var(--base-opacity, 0.3) + 0.1); }
+}
+
+/* Constellation line fade */
+@keyframes constellation-fade {
+  0%, 100% { opacity: 0.04; }
+  50% { opacity: 0.08; }
+}
+
+/* Animation utility classes */
+.animate-twinkle {
+  animation: twinkle var(--duration, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.animate-shooting-star-fall {
+  animation: shooting-star-fall var(--duration, 3s) linear forwards;
+}
+
+.animate-float-gentle {
+  animation: float-gentle 8s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.animate-constellation {
+  animation: constellation-fade 6s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
