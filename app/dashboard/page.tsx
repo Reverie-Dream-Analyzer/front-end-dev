@@ -267,7 +267,7 @@ export default function DashboardPage() {
     {
       id: 'alarms',
       title: 'Alarm Clock',
-      description: 'Set gentle alarms to wake and remind you to jot down dreams immediately.',
+      description: 'Coming Soon! Stay tuned for updates!',
       icon: AlarmClock,
       highlight: 'Manage alarms',
       highlightIcon: AlarmClock,
