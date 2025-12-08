@@ -1,14 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Dream } from './dream-entry';
-import { Pencil, Search, Trash2 } from 'lucide-react';
+import { Pencil, Search, Trash2, Sparkles, X, Loader2 } from 'lucide-react';
 
 type DreamListProps = {
   dreams: Dream[];
   onDeleteDream: (id: string) => void;
   onEditDream: (id: string, updates: Partial<Dream>) => void;
 };
+
+type InsightData = {
+  labels: string[];
+  summary: string;
+} | null;
+
+type InsightStatus = 'pending' | 'generating' | 'cached';
+type InsightCache = Record<string, { status: InsightStatus; data?: InsightData }>;
 
 const moodOptions = [
   { value: 'all', label: 'All moods' },
@@ -47,6 +55,114 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
     tags: '',
     lucidity: false,
   });
+  
+  // Insights modal state
+  const [insightsDream, setInsightsDream] = useState<Dream | null>(null);
+  const [insightsData, setInsightsData] = useState<InsightData>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  
+  // Track insight cache status per dream (for button styling)
+  const [insightCache, setInsightCache] = useState<InsightCache>({});
+
+  // Check which dreams have cached insights on mount
+  useEffect(() => {
+    const checkCachedInsights = async () => {
+      const authData = localStorage.getItem('reverie-auth-user');
+      const token = authData ? JSON.parse(authData).token : null;
+      if (!token) return;
+
+      for (const dream of dreams) {
+        if (insightCache[dream.id]?.status === 'cached') continue;
+        
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dream/insights/check/${dream.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.hasCached) {
+              setInsightCache(prev => ({
+                ...prev,
+                [dream.id]: { status: 'cached', data: data.insights }
+              }));
+            }
+          }
+        } catch {
+          // Ignore errors
+        }
+      }
+    };
+    
+    checkCachedInsights();
+  }, [dreams]);
+
+  const fetchInsights = async (dream: Dream) => {
+    setInsightsDream(dream);
+    setInsightsError(null);
+    
+    // If already cached, show immediately
+    const cached = insightCache[dream.id];
+    if (cached?.status === 'cached' && cached.data) {
+      setInsightsData(cached.data);
+      setInsightsLoading(false);
+      return;
+    }
+    
+    // Mark as generating
+    setInsightCache(prev => ({
+      ...prev,
+      [dream.id]: { status: 'generating' }
+    }));
+    setInsightsLoading(true);
+    setInsightsData(null);
+
+    try {
+      // Get token from reverie-auth-user storage
+      const authData = localStorage.getItem('reverie-auth-user');
+      const token = authData ? JSON.parse(authData).token : null;
+      
+      if (!token) {
+        throw new Error('Please log in to view insights');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dream/insights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dreamId: dream.id, dreamText: dream.description }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get insights');
+      }
+
+      const data = await response.json();
+      setInsightsData(data);
+      
+      // Update cache to cached status (now saved in database)
+      setInsightCache(prev => ({
+        ...prev,
+        [dream.id]: { status: 'cached', data }
+      }));
+    } catch (err) {
+      setInsightsError(err instanceof Error ? err.message : 'Something went wrong');
+      setInsightCache(prev => ({
+        ...prev,
+        [dream.id]: { status: 'pending' }
+      }));
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  const closeInsights = () => {
+    setInsightsDream(null);
+    setInsightsData(null);
+    setInsightsError(null);
+  };
 
   const filteredDreams = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -212,6 +328,33 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
                 <Pencil className="h-3.5 w-3.5" />
                 Edit dream
               </button>
+              {(() => {
+                const status = insightCache[dream.id]?.status || 'pending';
+                const isGenerating = status === 'generating';
+                const isCached = status === 'cached';
+                
+                return (
+                  <button
+                    type="button"
+                    onClick={() => fetchInsights(dream)}
+                    disabled={isGenerating}
+                    className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition ${
+                      isGenerating
+                        ? 'animate-pulse border-yellow-400/40 bg-yellow-500/10 text-yellow-200 cursor-wait'
+                        : isCached
+                        ? 'border-purple-400/40 bg-purple-500/10 text-purple-200 hover:border-purple-400/60 hover:bg-purple-500/20'
+                        : 'opacity-60 border-gray-400/40 bg-gray-500/10 text-gray-300 hover:opacity-80 hover:border-gray-400/60'
+                    }`}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {isGenerating ? 'Generating...' : isCached ? 'View Insights' : 'Generate Insights'}
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 onClick={() => {
@@ -318,6 +461,96 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
               >
                 Save changes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dream Insights Modal */}
+      {insightsDream && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl rounded-3xl border border-purple-400/30 bg-gradient-to-br from-slate-900 via-purple-950/50 to-slate-900 p-8 shadow-2xl">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={closeInsights}
+              className="absolute right-4 top-4 rounded-full p-2 text-purple-200/60 transition hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/20">
+                <Sparkles className="h-6 w-6 text-purple-300" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white">Dream Insights</h3>
+                <p className="text-sm text-purple-200/70">{insightsDream.title}</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="mt-6">
+              {insightsLoading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                  <p className="mt-4 text-sm text-purple-200/70">Analyzing your dream with AI...</p>
+                </div>
+              )}
+
+              {insightsError && (
+                <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-6 text-center">
+                  <p className="text-red-200">{insightsError}</p>
+                  <button
+                    type="button"
+                    onClick={() => fetchInsights(insightsDream)}
+                    className="mt-4 rounded-xl border border-red-400/40 bg-red-500/20 px-4 py-2 text-sm text-red-100 transition hover:bg-red-500/30"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+
+              {insightsData && (
+                <div className="space-y-6">
+                  {/* Emotional Labels */}
+                  {insightsData.labels && insightsData.labels.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium uppercase tracking-wide text-purple-300/80">
+                        Emotional Themes
+                      </h4>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {insightsData.labels.map((label, index) => (
+                          <span
+                            key={index}
+                            className="rounded-full bg-purple-500/20 px-4 py-1.5 text-sm font-medium text-purple-100"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Summary */}
+                  <div>
+                    <h4 className="text-sm font-medium uppercase tracking-wide text-purple-300/80">
+                      Personalized Interpretation
+                    </h4>
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-5">
+                      <p className="leading-relaxed text-indigo-100/90">
+                        {insightsData.summary}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Disclaimer */}
+                  <p className="text-center text-xs text-purple-200/50">
+                    ✨ AI-powered insights are for self-reflection purposes only
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
