@@ -48,14 +48,14 @@ export interface MoodDistributionResponse {
 
 // GET /streak
 export function getUserStreak() {
-  return api<StreakResponse>("/user_bp/streak");
+  return api<StreakResponse>("/user/streak");
 }
 
 
 /* ----------- GET USER PROFILE ---------------- */
 export function getUserProfile(userId: string) {
   return api<UserProfile>(
-    `/user_bp/users/${userId}`,
+    `/user/users/${userId}`,
     { method: "GET" }
   );
 }
@@ -70,7 +70,7 @@ export function updateUserProfile(
   }
 ) {
   return api<UserProfileUpdateResponse>(
-    `/user_bp/users/${userId}`,
+    `/user/users/${userId}`,
     {
       method: "PUT",
       body: JSON.stringify(data),
@@ -81,7 +81,7 @@ export function updateUserProfile(
 /* ----------- USER DREAM STATS --------------- */
 export function getUserDreamStats(userId: string) {
   return api<UserDreamStats>(
-    `/user_bp/users/${userId}/stats`,
+    `/user/users/${userId}/stats`,
     { method: "GET" }
   );
 }
@@ -89,7 +89,7 @@ export function getUserDreamStats(userId: string) {
 /* ----------- TOP TAGS --------------- */
 export function getUserTopTags(userId: string) {
   return api<TopTagsResponse>(
-    `/user_bp/users/${userId}/tags/top`,
+    `/user/users/${userId}/tags/top`,
     { method: "GET" }
   );
 }
@@ -97,7 +97,7 @@ export function getUserTopTags(userId: string) {
 /* ----------- MOOD DISTRIBUTION --------------- */
 export function getUserMoodDistribution(userId: string) {
   return api<MoodDistributionResponse>(
-    `/user_bp/users/${userId}/moods`,
+    `/user/users/${userId}/moods`,
     { method: "GET" }
   );
 }

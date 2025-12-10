@@ -213,7 +213,7 @@ export function ProfileSetup() {
       if (user.id) {
         await updateUserProfile(user.id, {
           birthdate: birthday,
-          favorite_element: favoriteElement,
+          favorite_element: favoriteElement.toLowerCase(), // Backend expects lowercase
           dream_goals: selectedGoals,
         });
       }
@@ -353,6 +353,8 @@ export function ProfileSetup() {
                 type="date"
                 value={birthday}
                 onChange={(event) => handleBirthdayChange(event.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                min="1900-01-01"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-400/60 transition-colors duration-300"
                 autoFocus
               />

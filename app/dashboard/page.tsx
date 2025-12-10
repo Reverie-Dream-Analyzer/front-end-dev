@@ -18,8 +18,10 @@ import {
   Plus,
   Sparkles,
   Tag,
+  User,
   Zap,
 } from 'lucide-react';
+import { ProfileModal } from '@/components/profile-modal';
 
 const cormorant = Cormorant_Garamond({ weight: ['400', '700'], subsets: ['latin'] });
 
@@ -52,6 +54,7 @@ export default function DashboardPage() {
   const { dreams, addDream, isLoaded } = useDreams();
   const [isRecording, setIsRecording] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [backendStats, setBackendStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -329,13 +332,23 @@ export default function DashboardPage() {
                   Track and analyze your dreams, then uncover fun conclusions from your subconscious.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:border-indigo-400 dark:hover:text-indigo-200"
-              >
-                Sign out
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:text-purple-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:border-purple-400 dark:hover:text-purple-200"
+                >
+                  <User className="h-4 w-4" />
+                  Your Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:border-indigo-400 dark:hover:text-indigo-200"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </section>
 
@@ -502,6 +515,9 @@ export default function DashboardPage() {
           </section>
         </div>
       </main>
+
+      {/* Profile Modal */}
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
   );
 }

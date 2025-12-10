@@ -5,6 +5,14 @@ import { api } from "../api";
 // RESPONSE TYPES FROM BACKEND
 export interface AuthResponse {
   token: string;
+  user?: {
+    id: string;
+    email: string;
+    has_profile: boolean;
+    birthdate: string | null;
+    favorite_element: string | null;
+    dream_goals: string[];
+  };
 }
 
 export interface UserMe {

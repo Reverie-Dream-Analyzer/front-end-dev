@@ -43,6 +43,30 @@ const moodEmoji: Record<string, string> = {
   neutral: '😐',
 };
 
+// Format AI model labels into human-readable text
+const labelDisplayNames: Record<string, string> = {
+  agg_emotional_category: 'Aggressive & Emotional',
+  good_fortune: 'Good Fortune',
+  misfortune: 'Misfortune',
+  happiness: 'Happiness',
+  sadness: 'Sadness',
+  fear: 'Fear',
+  anger: 'Anger',
+  confusion: 'Confusion',
+};
+
+function formatLabel(label: string): string {
+  // Check if we have a custom display name
+  if (labelDisplayNames[label]) {
+    return labelDisplayNames[label];
+  }
+  // Otherwise, convert snake_case to Title Case
+  return label
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMood, setSelectedMood] = useState('all');
@@ -526,7 +550,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
                             key={index}
                             className="rounded-full bg-purple-500/20 px-4 py-1.5 text-sm font-medium text-purple-100"
                           >
-                            {label}
+                            {formatLabel(label)}
                           </span>
                         ))}
                       </div>
