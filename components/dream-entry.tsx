@@ -43,6 +43,7 @@ const emptyFormState = {
 export function DreamEntry({ onAddDream, onCancel }: DreamEntryProps) {
   const [form, setForm] = useState(emptyFormState);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const moodLabel = useMemo(
     () => MOOD_OPTIONS.find((option) => option.value === form.mood)?.label ?? 'Select mood',
@@ -53,10 +54,15 @@ export function DreamEntry({ onAddDream, onCancel }: DreamEntryProps) {
     event.preventDefault();
     setError(null);
 
+    // Prevent double submissions
+    if (isSubmitting) return;
+
     if (!form.title.trim() || !form.description.trim() || !form.mood) {
       setError('Please provide a title, description, and overall mood.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const newDream: Dream = {
       id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(),
@@ -71,6 +77,7 @@ export function DreamEntry({ onAddDream, onCancel }: DreamEntryProps) {
 
     onAddDream(newDream);
     setForm(emptyFormState);
+    setIsSubmitting(false);
   };
 
   const addTag = () => {
@@ -262,9 +269,10 @@ export function DreamEntry({ onAddDream, onCancel }: DreamEntryProps) {
           )}
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500/40"
+            disabled={isSubmitting}
+            className="inline-flex items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save dream entry
+            {isSubmitting ? 'Saving...' : 'Save dream entry'}
           </button>
         </div>
       </form>

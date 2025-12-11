@@ -81,8 +81,8 @@ export default function InsightsPage() {
             <DreamAnalysis dreams={dreams} />
           </section>
 
-          <section className="space-y-8 rounded-3xl border border-white/40 bg-white/85 p-8 shadow-xl backdrop-blur dark:border-white/10 dark:bg-white/5">
-            <AstrologicalInsights profile={user.profile} />
+          <section className="space-y-8 rounded-3xl border border-purple-500/30 bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950/90 p-8 shadow-xl backdrop-blur">
+            <AstrologicalInsights profile={user.profile} dreams={dreams} />
           </section>
         </div>
       </main>

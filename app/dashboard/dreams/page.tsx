@@ -43,10 +43,10 @@ export default function DreamBankPage() {
             </button>
             <div>
               <p className="text-sm uppercase tracking-wide text-indigo-500 dark:text-indigo-300">
-                Dream bank
+                Dream library
               </p>
               <h1 className={`${cormorant.className} mt-2 text-4xl font-semibold text-slate-900 dark:text-white`}>
-                Explore your dream library
+                Explore your dream library & <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-bold drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">AI Insights</span>
               </h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 Filter and edit your saved dreams, spot recurring symbols, and keep your journal up to date.

@@ -249,7 +249,7 @@ export default function DashboardPage() {
     },
     {
       id: 'history',
-      title: 'Dream Library',
+      title: 'Dream Library & AI Insights',
       description: `Browse your ${metrics.total} recorded dreams, search by tags, and revisit favorites.`,
       icon: History,
       highlight: `${metrics.total} saved`,
@@ -369,7 +369,11 @@ export default function DashboardPage() {
                     </span>
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 transition group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-200">
-                        {card.title}
+                        {card.id === 'history' ? (
+                          <>Dream Library & <span className="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent font-bold drop-shadow-[0_0_12px_rgba(168,85,247,0.8)] [text-shadow:0_0_20px_rgba(192,132,252,0.9)]">✨ AI Insights</span></>
+                        ) : (
+                          card.title
+                        )}
                       </h3>
                       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{card.description}</p>
                     </div>

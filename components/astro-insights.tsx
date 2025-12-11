@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
   Sparkles, 
@@ -8,13 +8,155 @@ import {
   Gem,
   Scroll,
   Telescope,
-  Wand2
+  Wand2,
+  Flame,
+  Trophy,
+  Target,
+  TrendingUp,
+  Calendar,
+  Droplets,
+  Wind,
+  Mountain
 } from "lucide-react";
 import type { UserProfile } from '@/types/user-profile';
+import type { Dream } from '@/components/dream-entry';
 
 interface AstrologicalInsightsProps {
   profile: UserProfile;
+  dreams?: Dream[];
 }
+
+// Moon phase calculation
+const getMoonPhase = (date: Date = new Date()): { phase: string; emoji: string; illumination: number; description: string } => {
+  // Known new moon: January 6, 2000
+  const knownNewMoon = new Date(2000, 0, 6, 18, 14);
+  const lunarCycle = 29.53058867; // days
+  
+  const daysSinceKnown = (date.getTime() - knownNewMoon.getTime()) / (1000 * 60 * 60 * 24);
+  const currentCycleDay = ((daysSinceKnown % lunarCycle) + lunarCycle) % lunarCycle;
+  const illumination = Math.round((1 - Math.cos((currentCycleDay / lunarCycle) * 2 * Math.PI)) / 2 * 100);
+  
+  if (currentCycleDay < 1.85) return { phase: "New Moon", emoji: "🌑", illumination, description: "Dreams may be introspective and focused on new beginnings" };
+  if (currentCycleDay < 7.38) return { phase: "Waxing Crescent", emoji: "🌒", illumination, description: "Intentions set now may appear in your dreams" };
+  if (currentCycleDay < 9.23) return { phase: "First Quarter", emoji: "🌓", illumination, description: "Dreams may feature challenges or decisions" };
+  if (currentCycleDay < 14.77) return { phase: "Waxing Gibbous", emoji: "🌔", illumination, description: "Dreams become more vivid and detailed" };
+  if (currentCycleDay < 16.61) return { phase: "Full Moon", emoji: "🌕", illumination, description: "Peak dream intensity - lucid dreaming is more likely!" };
+  if (currentCycleDay < 22.15) return { phase: "Waning Gibbous", emoji: "🌖", illumination, description: "Dreams may bring gratitude or reflection themes" };
+  if (currentCycleDay < 23.99) return { phase: "Last Quarter", emoji: "🌗", illumination, description: "Dreams may help release old patterns" };
+  return { phase: "Waning Crescent", emoji: "🌘", illumination, description: "Dreams become more symbolic and mysterious" };
+};
+
+// Calculate dream streaks and achievements
+const calculateDreamStats = (dreams: Dream[]) => {
+  if (!dreams || dreams.length === 0) {
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
+      totalDreams: 0,
+      lucidCount: 0,
+      lucidRate: 0,
+      moodDistribution: {} as Record<string, number>,
+      tagFrequency: {} as Record<string, number>,
+      achievements: [] as { id: string; name: string; emoji: string; description: string; unlocked: boolean }[]
+    };
+  }
+
+  // Sort dreams by date
+  const sortedDreams = [...dreams].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  // Calculate streaks
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 1;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Check if dreamed today or yesterday to start streak
+  const mostRecentDate = new Date(sortedDreams[0].date);
+  mostRecentDate.setHours(0, 0, 0, 0);
+  const daysSinceLastDream = Math.floor((today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (daysSinceLastDream <= 1) {
+    currentStreak = 1;
+    for (let i = 1; i < sortedDreams.length; i++) {
+      const prevDate = new Date(sortedDreams[i - 1].date);
+      const currDate = new Date(sortedDreams[i].date);
+      prevDate.setHours(0, 0, 0, 0);
+      currDate.setHours(0, 0, 0, 0);
+      const dayDiff = Math.floor((prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (dayDiff === 1) {
+        currentStreak++;
+      } else if (dayDiff === 0) {
+        // Same day, continue
+      } else {
+        break;
+      }
+    }
+  }
+  
+  // Calculate longest streak
+  tempStreak = 1;
+  for (let i = 1; i < sortedDreams.length; i++) {
+    const prevDate = new Date(sortedDreams[i - 1].date);
+    const currDate = new Date(sortedDreams[i].date);
+    prevDate.setHours(0, 0, 0, 0);
+    currDate.setHours(0, 0, 0, 0);
+    const dayDiff = Math.floor((prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (dayDiff === 1) {
+      tempStreak++;
+    } else if (dayDiff > 1) {
+      longestStreak = Math.max(longestStreak, tempStreak);
+      tempStreak = 1;
+    }
+  }
+  longestStreak = Math.max(longestStreak, tempStreak, currentStreak);
+  
+  // Calculate stats
+  const lucidCount = dreams.filter(d => d.lucidity).length;
+  const lucidRate = Math.round((lucidCount / dreams.length) * 100);
+  
+  // Mood distribution
+  const moodDistribution: Record<string, number> = {};
+  dreams.forEach(d => {
+    if (d.mood) {
+      moodDistribution[d.mood] = (moodDistribution[d.mood] || 0) + 1;
+    }
+  });
+  
+  // Tag frequency
+  const tagFrequency: Record<string, number> = {};
+  dreams.forEach(d => {
+    (d.tags || []).forEach(tag => {
+      tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+    });
+  });
+  
+  // Achievements
+  const achievements = [
+    { id: "first_dream", name: "First Dream", emoji: "🌟", description: "Record your first dream", unlocked: dreams.length >= 1 },
+    { id: "week_streak", name: "Lunar Week", emoji: "🌙", description: "7-day dream streak", unlocked: longestStreak >= 7 },
+    { id: "month_streak", name: "Moon Cycle Master", emoji: "🌕", description: "30-day dream streak", unlocked: longestStreak >= 30 },
+    { id: "lucid_first", name: "Awakened Dreamer", emoji: "👁️", description: "Record a lucid dream", unlocked: lucidCount >= 1 },
+    { id: "lucid_10", name: "Dream Walker", emoji: "🚀", description: "10 lucid dreams", unlocked: lucidCount >= 10 },
+    { id: "dreams_10", name: "Star Collector", emoji: "⭐", description: "Record 10 dreams", unlocked: dreams.length >= 10 },
+    { id: "dreams_50", name: "Constellation Builder", emoji: "✨", description: "Record 50 dreams", unlocked: dreams.length >= 50 },
+    { id: "dreams_100", name: "Galaxy Creator", emoji: "🌌", description: "Record 100 dreams", unlocked: dreams.length >= 100 },
+  ];
+  
+  return {
+    currentStreak,
+    longestStreak,
+    totalDreams: dreams.length,
+    lucidCount,
+    lucidRate,
+    moodDistribution,
+    tagFrequency,
+    achievements
+  };
+};
 
 interface Insight {
   title: string;
@@ -23,8 +165,24 @@ interface Insight {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export const AstrologicalInsights = ({ profile }: AstrologicalInsightsProps) => {
+export const AstrologicalInsights = ({ profile, dreams = [] }: AstrologicalInsightsProps) => {
   const [selectedInsight, setSelectedInsight] = useState<"daily" | "weekly" | "monthly" | "personality" | "compatibility">("daily");
+  
+  const moonPhase = useMemo(() => getMoonPhase(), []);
+  const dreamStats = useMemo(() => calculateDreamStats(dreams), [dreams]);
+  
+  // Get element icon
+  const getElementIcon = (element: string) => {
+    switch (element) {
+      case "Fire": return Flame;
+      case "Water": return Droplets;
+      case "Air": return Wind;
+      case "Earth": return Mountain;
+      default: return Sparkles;
+    }
+  };
+  
+  const ElementIcon = getElementIcon(profile.zodiacSign.element);
 
   // Generate insights based on zodiac sign
   const generateInsights = (profile: UserProfile): Record<Insight['type'], Insight> => {
@@ -180,6 +338,221 @@ export const AstrologicalInsights = ({ profile }: AstrologicalInsightsProps) => 
           </div>
         </div>
       </motion.div>
+
+      {/* ==================== NEW FEATURES ==================== */}
+      
+      {/* Moon Phase & Dream Stats Row */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.6 }}
+      >
+        {/* Moon Phase Tracker */}
+        <div className="bg-gradient-to-br from-indigo-900/50 via-purple-900/40 to-blue-900/50 backdrop-blur-md border border-indigo-400/30 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-5xl">{moonPhase.emoji}</div>
+            <div>
+              <h3 className="text-white text-lg font-medium">{moonPhase.phase}</h3>
+              <p className="text-indigo-300/80 text-sm">{moonPhase.illumination}% illuminated</p>
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="h-2 bg-indigo-900/50 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-indigo-400 to-purple-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${moonPhase.illumination}%` }}
+                transition={{ duration: 1, delay: 0.5 }}
+              />
+            </div>
+          </div>
+          <p className="text-purple-200/70 text-sm italic">
+            {moonPhase.description}
+          </p>
+          <div className="mt-3 pt-3 border-t border-white/10">
+            <p className="text-indigo-300/60 text-xs">
+              🌙 As a {profile.zodiacSign.sign}, the {moonPhase.phase.toLowerCase()} enhances your {profile.zodiacSign.element.toLowerCase()} dream energy
+            </p>
+          </div>
+        </div>
+
+        {/* Dream Streak Tracker */}
+        <div className="bg-gradient-to-br from-amber-900/40 via-orange-900/30 to-yellow-900/40 backdrop-blur-md border border-amber-400/30 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/30 rounded-lg">
+                <Flame className="h-6 w-6 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="text-white text-lg font-medium">Dream Streak</h3>
+                <p className="text-amber-300/80 text-sm">Keep the fire alive!</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-4xl font-bold text-amber-300">{dreamStats.currentStreak}</p>
+              <p className="text-amber-400/60 text-xs">days</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="bg-white/5 rounded-lg p-2">
+              <p className="text-xl font-semibold text-orange-300">{dreamStats.longestStreak}</p>
+              <p className="text-orange-400/60 text-xs">Best Streak</p>
+            </div>
+            <div className="bg-white/5 rounded-lg p-2">
+              <p className="text-xl font-semibold text-yellow-300">{dreamStats.totalDreams}</p>
+              <p className="text-yellow-400/60 text-xs">Total Dreams</p>
+            </div>
+            <div className="bg-white/5 rounded-lg p-2">
+              <p className="text-xl font-semibold text-amber-300">{dreamStats.lucidRate}%</p>
+              <p className="text-amber-400/60 text-xs">Lucid Rate</p>
+            </div>
+          </div>
+          {dreamStats.currentStreak >= 3 && (
+            <div className="mt-3 pt-3 border-t border-white/10 text-center">
+              <p className="text-amber-300/80 text-sm">🔥 You&apos;re on fire! Keep dreaming!</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Achievements Section */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Trophy className="h-6 w-6 text-yellow-400" />
+          <h3 className="text-xl text-white">Cosmic Achievements</h3>
+          <span className="text-purple-300/60 text-sm">
+            ({dreamStats.achievements.filter(a => a.unlocked).length}/{dreamStats.achievements.length} unlocked)
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {dreamStats.achievements.map((achievement) => (
+            <motion.div
+              key={achievement.id}
+              className={`relative p-4 rounded-xl border text-center transition-all ${
+                achievement.unlocked
+                  ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-400/40"
+                  : "bg-white/5 border-white/10 opacity-50"
+              }`}
+              whileHover={{ scale: achievement.unlocked ? 1.05 : 1 }}
+            >
+              <div className={`text-3xl mb-2 ${achievement.unlocked ? "" : "grayscale"}`}>
+                {achievement.emoji}
+              </div>
+              <p className={`text-sm font-medium ${achievement.unlocked ? "text-yellow-200" : "text-gray-400"}`}>
+                {achievement.name}
+              </p>
+              <p className="text-xs text-purple-300/50 mt-1">{achievement.description}</p>
+              {achievement.unlocked && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Zodiac Dream Statistics */}
+      {dreamStats.totalDreams > 0 && (
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.6 }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingUp className="h-6 w-6 text-cyan-400" />
+            <h3 className="text-xl text-white">Your {profile.zodiacSign.sign} Dream Patterns</h3>
+          </div>
+          <div className="bg-gradient-to-br from-cyan-900/30 via-teal-900/20 to-emerald-900/30 backdrop-blur-md border border-cyan-400/20 rounded-2xl p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Mood Analysis */}
+              <div>
+                <h4 className="text-cyan-300 text-sm font-medium mb-3 flex items-center gap-2">
+                  <ElementIcon className="h-4 w-4" /> Mood Patterns
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(dreamStats.moodDistribution)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 4)
+                    .map(([mood, count]) => {
+                      const percentage = Math.round((count / dreamStats.totalDreams) * 100);
+                      const moodEmojis: Record<string, string> = {
+                        happy: "😊", sad: "😢", anxious: "😰", peaceful: "😌", 
+                        excited: "🤩", confused: "😵", neutral: "😐", scared: "😨"
+                      };
+                      return (
+                        <div key={mood} className="flex items-center gap-2">
+                          <span className="text-lg">{moodEmojis[mood] || "💭"}</span>
+                          <span className="text-purple-200 text-sm capitalize w-20">{mood}</span>
+                          <div className="flex-1 h-2 bg-cyan-900/30 rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-gradient-to-r from-cyan-400 to-teal-400"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${percentage}%` }}
+                              transition={{ duration: 0.8, delay: 0.5 }}
+                            />
+                          </div>
+                          <span className="text-cyan-300/70 text-xs w-10 text-right">{percentage}%</span>
+                        </div>
+                      );
+                    })}
+                  {Object.keys(dreamStats.moodDistribution).length === 0 && (
+                    <p className="text-purple-300/50 text-sm">No mood data yet</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Top Tags */}
+              <div>
+                <h4 className="text-emerald-300 text-sm font-medium mb-3 flex items-center gap-2">
+                  <Target className="h-4 w-4" /> Top Dream Themes
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(dreamStats.tagFrequency)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 8)
+                    .map(([tag, count]) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-full text-emerald-200 text-sm"
+                      >
+                        #{tag} <span className="text-emerald-400/60">×{count}</span>
+                      </span>
+                    ))}
+                  {Object.keys(dreamStats.tagFrequency).length === 0 && (
+                    <p className="text-purple-300/50 text-sm">No tags yet - add tags to your dreams!</p>
+                  )}
+                </div>
+                
+                {/* Lucid Dreams by Zodiac */}
+                <div className="mt-4 p-3 bg-white/5 rounded-xl">
+                  <p className="text-purple-200 text-sm">
+                    <span className="text-cyan-300">{dreamStats.lucidCount}</span> of your dreams were lucid
+                    {dreamStats.lucidRate > 15 && (
+                      <span className="text-emerald-400"> — exceptional for a {profile.zodiacSign.sign}! ✨</span>
+                    )}
+                    {dreamStats.lucidRate > 0 && dreamStats.lucidRate <= 15 && (
+                      <span className="text-purple-300/70"> — your {profile.zodiacSign.element} energy supports lucid awareness</span>
+                    )}
+                    {dreamStats.lucidRate === 0 && (
+                      <span className="text-purple-300/70"> — {profile.zodiacSign.element} signs often develop lucidity gradually</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* ==================== END NEW FEATURES ====================  */}
 
       {/* Insight Type Selector */}
       <motion.div

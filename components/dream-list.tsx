@@ -45,7 +45,7 @@ const moodEmoji: Record<string, string> = {
 
 // Format AI model labels into human-readable text
 const labelDisplayNames: Record<string, string> = {
-  agg_emotional_category: 'Aggressive & Emotional',
+  agg_physical: 'Physical Activity',
   good_fortune: 'Good Fortune',
   misfortune: 'Misfortune',
   happiness: 'Happiness',
@@ -150,6 +150,10 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
         throw new Error('Please log in to view insights');
       }
 
+      // Use AbortController with 3-minute timeout (AI model cold starts can be slow)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dream/insights`, {
         method: 'POST',
         headers: {
@@ -157,7 +161,10 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ dreamId: dream.id, dreamText: dream.description }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to get insights');
@@ -172,7 +179,17 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
         [dream.id]: { status: 'cached', data }
       }));
     } catch (err) {
-      setInsightsError(err instanceof Error ? err.message : 'Something went wrong');
+      let errorMessage = 'Something went wrong';
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timed out. The AI service may be warming up - please try again.';
+        } else if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'Connection error. The AI service may be starting up - please try again in a moment.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      setInsightsError(errorMessage);
       setInsightCache(prev => ({
         ...prev,
         [dream.id]: { status: 'pending' }
@@ -262,7 +279,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
         <div className="w-full lg:max-w-md">
           <label className="flex items-center gap-2 text-sm text-indigo-200/80">
             <Search className="h-4 w-4" />
-            Search dream bank
+            Search dream library
           </label>
           <input
             value={searchTerm}
@@ -366,8 +383,8 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
                       isGenerating
                         ? 'animate-pulse border-yellow-400/40 bg-yellow-500/10 text-yellow-200 cursor-wait'
                         : isCached
-                        ? 'border-purple-400/40 bg-purple-500/10 text-purple-200 hover:border-purple-400/60 hover:bg-purple-500/20'
-                        : 'opacity-60 border-gray-400/40 bg-gray-500/10 text-gray-300 hover:opacity-80 hover:border-gray-400/60'
+                        ? 'border-purple-300/70 bg-purple-500/35 text-white hover:border-purple-200 hover:bg-purple-500/45 shadow-md shadow-purple-500/30'
+                        : 'border-cyan-300/80 bg-gradient-to-r from-cyan-500/45 via-purple-500/45 to-pink-500/45 text-white shadow-lg shadow-cyan-500/30 hover:border-cyan-200 hover:shadow-cyan-400/40'
                     }`}
                   >
                     {isGenerating ? (
@@ -375,7 +392,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
                     ) : (
                       <Sparkles className="h-3.5 w-3.5" />
                     )}
-                    {isGenerating ? 'Generating...' : isCached ? 'View Insights' : 'Generate Insights'}
+                    {isGenerating ? 'Generating...' : isCached ? 'View AI Insights' : 'Generate AI Insights'}
                   </button>
                 );
               })()}
