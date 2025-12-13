@@ -85,7 +85,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
   const [insightsData, setInsightsData] = useState<InsightData>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
-  const [insightsLoadingPhase, setInsightsLoadingPhase] = useState<'initial' | 'waiting' | 'back'>('initial');
+  const [insightsLoadingPhase, setInsightsLoadingPhase] = useState<'analyzing' | 'themes' | 'working' | 'optimizing'>('analyzing');
   
   // Track insight cache status per dream (for button styling)
   const [insightCache, setInsightCache] = useState<InsightCache>({});
@@ -125,7 +125,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
   const fetchInsights = async (dream: Dream) => {
     setInsightsDream(dream);
     setInsightsError(null);
-    setInsightsLoadingPhase('initial');
+    setInsightsLoadingPhase('analyzing');
     
     // If already cached, show immediately
     const cached = insightCache[dream.id];
@@ -143,10 +143,10 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
     setInsightsLoading(true);
     setInsightsData(null);
 
-    // Timer to change loading message after 30 seconds
-    const phase1Timer = setTimeout(() => setInsightsLoadingPhase('waiting'), 30000);
-    // Timer to switch back to initial message after 40 seconds (10s after phase 1)
-    const phase2Timer = setTimeout(() => setInsightsLoadingPhase('back'), 40000);
+    // Timers to change loading messages (purely cosmetic)
+    const phase1Timer = setTimeout(() => setInsightsLoadingPhase('themes'), 20000);      // 20s
+    const phase2Timer = setTimeout(() => setInsightsLoadingPhase('working'), 30000);     // 30s
+    const phase3Timer = setTimeout(() => setInsightsLoadingPhase('optimizing'), 45000);  // 45s
 
     try {
       // Get token from reverie-auth-user storage
@@ -156,7 +156,8 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
       if (!token) {
         clearTimeout(phase1Timer);
         clearTimeout(phase2Timer);
-        throw new Error('Please log in to view insights');
+        clearTimeout(phase3Timer);
+        throw new Error('Please log in to view insights';
       }
 
       // Use AbortController with 3-minute timeout (AI model cold starts can be slow)
@@ -176,6 +177,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
       clearTimeout(timeoutId);
       clearTimeout(phase1Timer);
       clearTimeout(phase2Timer);
+      clearTimeout(phase3Timer);
 
       if (!response.ok) {
         throw new Error('Failed to get insights');
@@ -548,9 +550,10 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
                   <p className="mt-4 text-sm text-purple-200/70">
-                    {insightsLoadingPhase === 'waiting' 
-                      ? "Don't worry, the AI is working — wait a few more moments..."
-                      : "Analyzing your dream with AI..."}
+                    {insightsLoadingPhase === 'analyzing' && "Analyzing your dream with AI..."}
+                    {insightsLoadingPhase === 'themes' && "Finding themes..."}
+                    {insightsLoadingPhase === 'working' && "Don't worry, the AI is working — wait a few more moments..."}
+                    {insightsLoadingPhase === 'optimizing' && "The AI model is making final optimizations..."}
                   </p>
                 </div>
               )}
