@@ -157,7 +157,7 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
         clearTimeout(phase1Timer);
         clearTimeout(phase2Timer);
         clearTimeout(phase3Timer);
-        throw new Error('Please log in to view insights';
+        throw new Error('Please log in to view insights');
       }
 
       // Use AbortController with 3-minute timeout (AI model cold starts can be slow)
