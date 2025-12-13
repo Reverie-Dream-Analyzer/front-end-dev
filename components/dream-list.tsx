@@ -555,11 +555,11 @@ export function DreamList({ dreams, onDeleteDream, onEditDream }: DreamListProps
 
               {insightsData && (
                 <div className="space-y-6">
-                  {/* Emotional Labels */}
+                  {/* Dream Themes Labels */}
                   {insightsData.labels && insightsData.labels.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium uppercase tracking-wide text-purple-300/80">
-                        Emotional Themes
+                        Dream Themes
                       </h4>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {insightsData.labels.map((label, index) => (
